@@ -19,7 +19,8 @@ export const taskService = {
         userId: userId,
         status: 'open',
         createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
+        attachments: taskData.attachments || []
       };
       
       const docRef = await addDoc(collection(db, 'tasks'), taskWithMetadata);
@@ -40,7 +41,8 @@ export const taskService = {
       const taskRef = doc(db, 'tasks', taskId);
       await updateDoc(taskRef, {
         ...updates,
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
+        deadline: updates.deadline ? new Date(updates.deadline) : null,
       });
     } catch (error) {
       console.error('Error updating task:', error);

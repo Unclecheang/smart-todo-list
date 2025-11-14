@@ -15,6 +15,168 @@ const Dashboard = () => {
   const { tasks, loading: tasksLoading } = useTasks();
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+  // 🔔 添加状态管理弹窗提醒
+
+  // 🔔 任务提醒功能：请求通知权限
+  const requestNotificationPermission = async () => {
+    if (!('Notification' in window)) {
+      console.log('This browser does not support desktop notification');
+      return false;
+    }
+    
+    if (Notification.permission === 'granted') {
+      return true;
+    }
+    
+    if (Notification.permission !== 'denied') {
+      const permission = await Notification.requestPermission();
+      return permission === 'granted';
+    }
+    
+    return false;
+  };
+
+  // 🔔 任务提醒功能：显示风格弹窗通知
+
+  // 🔔 任务提醒功能：检查任务提醒
+  const checkTaskReminders = () => {
+    if (!user || !tasks || tasks.length === 0) return;
+    
+    const now = new Date();
+    const nowTime = now.getTime();
+    
+    tasks.forEach(task => {
+      if (!task.deadline || task.status === 'done') return;
+      
+      const deadline = new Date(task.deadline);
+      const deadlineTime = deadline.getTime();
+      console.log('deadline', deadline);
+      console.log('now', now);
+      
+      
+      // 计算剩余天数
+      const timeDiff = deadlineTime - nowTime;
+      console.log('nowTime', nowTime)
+      const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+      
+      // 检查是否需要提醒
+      let shouldRemind = false;
+      let reminderMessage = '';
+      
+      // 前三天、两天、一天和当天提醒
+      if (daysDiff === 3 || daysDiff === 2 || daysDiff === 1 || daysDiff === 0) {
+        shouldRemind = true;
+        if (daysDiff === 3) {
+          reminderMessage = `Task "${task.title}" is due in 3 days`;
+        } else if (daysDiff === 2) {
+          reminderMessage = `Task "${task.title}" is due in 2 days`;
+        } else if (daysDiff === 1) {
+          reminderMessage = `Task "${task.title}" is due tomorrow`;
+        } else {
+          reminderMessage = `Task "${task.title}" is due today`;
+        }
+      }
+      console.log('提示',daysDiff);
+      // reminderMessage = `Task "${task.title}" is due today`;
+      // showPopupNotification(reminderMessage, task);
+      
+      // 检查具体时间提醒
+      if (daysDiff === 0) {
+        const hoursDiff = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutesDiff = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+        
+        // 如果任务有具体时间，并且当前时间接近设定时间
+        if (hoursDiff === 0 && minutesDiff <= 5) {
+          shouldRemind = true;
+          reminderMessage = `Task "${task.title}" is due in ${minutesDiff} minutes`;
+        }
+      }
+      
+      // 0点提醒（对于只有日期的任务）
+      if (daysDiff === 0 && now.getHours() === 0 && now.getMinutes() < 5 && !task.time) {
+        shouldRemind = true;
+        reminderMessage = `Task "${task.title}" is due today`;
+      }
+      
+      // 发送提醒
+      if (shouldRemind) {
+        // 检查是否已经提醒过，避免重复提醒
+        const lastReminded = localStorage.getItem(`reminded_${task.taskID}`);
+        if (!lastReminded || parseInt(lastReminded) < nowTime - 60 * 60 * 1000) {
+          // 一小时内没有提醒过
+          setTimeout(() => {
+              alert(reminderMessage); // 使用浏览器原生alert
+            }, 5000); // 5000毫秒 = 5秒
+          localStorage.setItem(`reminded_${task.taskID}`, nowTime.toString());
+        }
+      }
+    });
+  };
+
+  // 📊 任务量控制：检查周一到周五任务量是否超限
+  const checkWorkload = () => {
+    // 只在周一到周五检查
+    const today = new Date().getDay();
+    if (today === 0 || today === 6) { // 0是周日，6是周六
+      return true; // 周末不限制
+    }
+    
+    // 获取本周一到周五的任务数量
+    const workdayTasks = tasks.filter(task => {
+      const taskDate = new Date(task.deadline);
+      const taskDay = taskDate.getDay();
+      return taskDay >= 1 && taskDay <= 5; // 周一到周五
+    });
+    
+    // 检查是否超过15个任务
+    if (workdayTasks.length >= 15) {
+      return window.confirm('You have reached the recommended task limit for the workweek (15 tasks). Adding more tasks may lead to overload. Are you sure you want to continue?');
+    }
+    
+    return true;
+  };
+
+  // 📎 附件功能：处理文件上传（现在改为本地存储）
+  const handleFileUpload = async (files) => {
+    if (!files || files.length === 0) return [];
+    
+    try {
+      const uploadedFiles = [];
+      for (const file of files) {
+        // 生成唯一的文件ID
+        const fileId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        // 读取文件内容并转换为base64
+        const base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        
+        // 创建文件对象存储在localStorage中
+        const fileObject = {
+          id: fileId,
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          data: base64,
+          uploadedAt: new Date().toISOString()
+        };
+        
+        // 存储到localStorage
+        localStorage.setItem(`file_${fileId}`, JSON.stringify(fileObject));
+        
+        // 返回文件引用URL
+        uploadedFiles.push(`local-file://${fileId}`);
+      }
+      return uploadedFiles;
+    } catch (error) {
+      console.error('Error processing files:', error);
+      alert('Failed to process files. Please try again.');
+      return [];
+    }
+  };
 
   // Get ALL tasks due today (both completed and pending)
   const allTasksDueToday = useMemo(() => {
@@ -48,38 +210,53 @@ const Dashboard = () => {
     return scheduled;
   }, [allTasksDueToday]);
 
-  // Calculate stats for Today's Overview - based on ALL tasks due today
+  // 🔥 修改：Today's Overview 基于所有任务计算
   const todayStats = useMemo(() => {
-    const totalDueToday = allTasksDueToday.length;
-    const completedToday = allTasksDueToday.filter(t => t.status === 'done').length;
-    const pendingToday = allTasksDueToday.filter(t => t.status !== 'done').length;
-    const highPriorityToday = allTasksDueToday.filter(t => t.priority === 'High').length;
+    // 基于所有任务计算，而不是仅今天到期的任务
+    const totalTasks = tasks?.length || 0;
+    const completedTasks = tasks?.filter(t => t.status === 'done').length || 0;
+    const pendingTasks = totalTasks - completedTasks;
     
-    const completionPercentage = totalDueToday > 0 ? (completedToday / totalDueToday) * 100 : 0;
-    
-    console.log('📊 Today Stats:', {
-      total: totalDueToday,
-      completed: completedToday,
-      pending: pendingToday,
-      highPriority: highPriorityToday,
-      completionPercentage: completionPercentage
+    console.log('📊 Today Stats (All Tasks):', {
+      total: totalTasks,
+      completed: completedTasks,
+      pending: pendingTasks
     });
     
     return {
-      total: totalDueToday,
-      completed: completedToday,
-      pending: pendingToday,
-      highPriority: highPriorityToday,
-      completionPercentage: completionPercentage
+      total: totalTasks,           // 所有任务数量
+      completed: completedTasks,   // 已完成任务数量
+      pending: pendingTasks        // 待处理任务数量
     };
-  }, [allTasksDueToday]);
+  }, [tasks]); // 🔥 依赖改为所有 tasks
 
+  // 📊 任务量控制：修改创建任务逻辑
   const handleCreateTask = async (taskData) => {
     try {
       if (!user) {
         console.error('No user found when creating task');
         return;
       }
+      
+      // 检查工作负载
+      if (!checkWorkload()) {
+        return;
+      }
+      
+      // 处理附件
+      if (taskData.attachments && taskData.attachments.length > 0) {
+        // 过滤掉已经上传的文件URL
+        const newAttachments = taskData.attachments.filter(file => file instanceof File);
+        if (newAttachments.length > 0) {
+          const uploadedFiles = await handleFileUpload(newAttachments);
+          // 保留已有的文件URL，添加新上传的URL
+          taskData.attachments = [
+            ...taskData.attachments.filter(file => typeof file === 'string'),
+            ...uploadedFiles
+          ];
+        }
+      }
+      
       await taskService.createTask(taskData, user.uid);
       setShowTaskForm(false);
     } catch (error) {
@@ -88,8 +265,23 @@ const Dashboard = () => {
     }
   };
 
+  // 📎 附件功能：修改编辑任务逻辑
   const handleEditTask = async (taskData) => {
     try {
+      // 处理附件
+      if (taskData.attachments && taskData.attachments.length > 0) {
+        // 过滤掉已经上传的文件URL
+        const newAttachments = taskData.attachments.filter(file => file instanceof File);
+        if (newAttachments.length > 0) {
+          const uploadedFiles = await handleFileUpload(newAttachments);
+          // 保留已有的文件URL，添加新上传的URL
+          taskData.attachments = [
+            ...taskData.attachments.filter(file => typeof file === 'string'),
+            ...uploadedFiles
+          ];
+        }
+      }
+      
       await taskService.updateTask(editingTask.taskID, taskData);
       setEditingTask(null);
     } catch (error) {
@@ -137,6 +329,26 @@ const Dashboard = () => {
     return '#4caf50'; // Dark green for 100%
   };
 
+  // 🔔 任务提醒功能：初始化通知和设置定时检查
+  useEffect(() => {
+    // 请求通知权限
+    const initNotifications = async () => {
+      await requestNotificationPermission();
+    };
+    
+    initNotifications();
+    
+    // 每5分钟检查一次提醒
+    const reminderInterval = setInterval(checkTaskReminders, 1 * 30 * 1000);
+    
+    // 立即检查一次
+    checkTaskReminders();
+    
+    return () => {
+      clearInterval(reminderInterval);
+    };
+  }, [user, tasks]);
+
   // Loading states
   if (authLoading) {
     return (
@@ -166,6 +378,8 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard">
+      {/* 🔔 添加弹窗提醒组件 */}
+
       <header className="dashboard-header">
         <div className="user-info">
           <h1>📝 Smart To-Do List</h1>
@@ -278,22 +492,29 @@ const Dashboard = () => {
               </div>
             ) : (
               <div className="tasks-list">
-                {tasks.map(task => (
-                  <TaskItem
-                    key={task.taskID}
-                    task={task}
-                    onEdit={setEditingTask}
-                    onDelete={handleDeleteTask}
-                    onComplete={handleCompleteTask}
-                  />
-                ))}
+                {tasks
+                  // 🔥 新增：按照 High > Medium > Low 优先级排序
+                  .sort((a, b) => {
+                    const priorityOrder = { 'High': 1, 'Medium': 2, 'Low': 3 };
+                    return priorityOrder[a.priority] - priorityOrder[b.priority];
+                  })
+                  .map(task => (
+                    <TaskItem
+                      key={task.taskID}
+                      task={task}
+                      onEdit={setEditingTask}
+                      onDelete={handleDeleteTask}
+                      onComplete={handleCompleteTask}
+                    />
+                  ))
+                }
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Task Form Modal */}
+      {/* 📎 附件功能：修改TaskForm组件，添加onFileUpload prop */}
       {(showTaskForm || editingTask) && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -316,6 +537,7 @@ const Dashboard = () => {
                 setShowTaskForm(false);
                 setEditingTask(null);
               }}
+              onFileUpload={handleFileUpload}
             />
           </div>
         </div>

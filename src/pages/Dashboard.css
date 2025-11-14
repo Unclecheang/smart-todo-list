@@ -1,0 +1,197 @@
+/* ... existing CSS code ... */
+
+/* 🔔 弹窗提醒样式 */
+.notification-popup {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.notification-content {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 16px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  min-width: 300px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.notification-message {
+  flex: 1;
+  font-weight: 500;
+  margin-right: 12px;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.notification-close:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .notification-popup {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+  }
+  
+  .notification-content {
+    min-width: auto;
+    padding: 12px 16px;
+  }
+}
+
+/* 📎 附件功能样式 */
+.drop-area {
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  padding: 30px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: #fafafa;
+  margin-bottom: 15px;
+}
+
+.drop-area.drag-over {
+  border-color: #4CAF50;
+  background-color: #e8f5e9;
+  transform: scale(1.02);
+}
+
+.drop-area-content {
+  color: #666;
+}
+
+.drop-icon {
+  font-size: 2.5em;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.drop-hint {
+  font-size: 0.9em;
+  color: #888;
+  margin: 5px 0;
+}
+
+.drop-limit {
+  font-size: 0.8em;
+  color: #999;
+  margin-top: 10px;
+}
+
+.attachments-preview {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+}
+
+.attachments-preview h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.attachments-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.attachment-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: white;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.attachment-name {
+  flex: 1;
+  font-size: 0.9em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 10px;
+}
+
+.attachment-size {
+  font-size: 0.8em;
+  color: #666;
+  margin-right: 10px;
+}
+
+.download-attachment {
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin-right: 5px;
+}
+
+.download-attachment:hover {
+  background: #45a049;
+}
+
+.remove-attachment {
+  background: #ff6b6b;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.remove-attachment:hover {
+  background: #ff5252;
+}
